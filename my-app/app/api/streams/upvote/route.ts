@@ -19,21 +19,22 @@ export async function POST(req: NextRequest) {
     })
 
     if (!user) {
-        // NextResponse.json({
-        //     msg: "Login first dumbass!"
-        // })
-        throw new Error("login first!");
+        NextResponse.json({
+            msg: "Login first dumbass!"
+        })
+        // throw new Error("login first!");
     }
 
 
     try {
         const data = UpvoteSchema.parse(await req.json());
-        await prisma.upvote.create({
+        const upvote = await prisma.upvote.create({
             data: {
-                userId: user?.id,
+                userId: user?.id ?? "",
                 streamId: data.streamId,
             }
         })
+        NextResponse.json(upvote)
     } catch (error) {
         console.log(error)
         NextResponse.json(error)
