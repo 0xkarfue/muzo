@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
         const extractedId = matchResult[1];
 
         const res = await youtubesearchapi.GetVideoDetails(extractedId);
+       
         // console.log(res.title)
         // console.log(res.thumbnail)
         // console.log(res.thumbnail.thumbnails);
@@ -57,8 +58,7 @@ export async function POST(req: NextRequest) {
             msg: "done"
         })
     } catch (error) {
-        console.log(error)
-        console.log("asasdfdfaslfjslfjsaldjflasjflsdj")
+        console.log( "ERROR FROM MUZO IS {{{-->   " + error + "   <--}}}")
         return NextResponse.json(error)
     }
 }

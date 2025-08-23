@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ArrowUp, Music, Share2, Play, Users } from "lucide-react"
+import axios from "axios"
+import { useSession } from "next-auth/react"
+import getCreatorId from "../lib/getCreatorId"
 
 interface Video {
   id: string
@@ -99,6 +102,18 @@ export default function VotePage() {
 
   const sortedQueue = [...queue].sort((a, b) => b.votes - a.votes)
 
+
+  const session = useSession()
+  const id = session.data?.user.id
+  function sendReqPost() {
+    console.log("clicked!")
+    const data = {
+      creatorId: id,
+      url: videoUrl
+    }
+    axios.post("http://localhost:3000/api/streams", data)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -170,7 +185,7 @@ export default function VotePage() {
                     onChange={(e) => handleUrlChange(e.target.value)}
                     className="flex-1"
                   />
-                  <Button disabled={!previewVideo}>Add to Queue</Button>
+                  <Button onClick={sendReqPost} disabled={!previewVideo}>Add to Queue</Button>
                 </div>
 
                 {previewVideo && (
