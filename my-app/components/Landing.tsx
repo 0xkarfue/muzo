@@ -1,11 +1,14 @@
+"use client"
 // name option "muzo" or "votebeats"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowUp, Music, Users, Zap, Play, Heart, TrendingUp } from "lucide-react"
+import { signIn, signOut, useSession } from "next-auth/react"
 
 export default function LandingPage() {
+  const session = useSession()
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -25,9 +28,18 @@ export default function LandingPage() {
             <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
               Pricing
             </a>
-            <Button variant="outline" size="sm">
-              Sign In
-            </Button>
+            {session.data?.user ? (
+              <>
+                <Button variant="outline" size="sm" onClick={() => signOut()}>
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => signIn()}>
+                Sign In
+              </Button>
+            )}
+
             <Button size="sm">Get Started</Button>
           </nav>
         </div>
