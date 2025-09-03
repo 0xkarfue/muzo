@@ -1,4 +1,4 @@
-import NextAuth, {DefaultSession} from "next-auth";
+import NextAuth, { DefaultSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/app/lib/db";
 
@@ -16,20 +16,16 @@ const handler = NextAuth({
             if (!account.user.email) {
                 return false;
             }
-            await prisma.user.create({
-                data: {
+            await prisma.user.upsert({
+                where: { email: account.user.email },
+                update: {}, 
+                create: {
                     email: account.user.email,
-                    provider: "Google"
-                }
-            })
+                    provider: "Google",
+                },
+            });
             return true
         },
-        async session({session, token}) {
-            if(session.user) {
-                session.user.id = token.sub ?? ""
-            }
-            return session
-        }
     },
 })
 
