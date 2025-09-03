@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 }
 
 
-export async function Get(req: NextRequest) {
+export async function GET(req: NextRequest) {
     const creatorId = req.nextUrl.searchParams.get("creatorId");
     if (!creatorId) {
         throw new Error("error")
