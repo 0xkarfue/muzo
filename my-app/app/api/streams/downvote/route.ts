@@ -19,10 +19,9 @@ export async function POST(req: NextRequest) {
     })
 
     if (!user) {
-        // NextResponse.json({
-        //     msg: "Login first dumbass!"
-        // })
-        throw new Error("login first!");
+        return NextResponse.json({
+            msg: "login first"
+        })
     }
 
 
