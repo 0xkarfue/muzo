@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (!user) {
-        NextResponse.json({
+        return NextResponse.json({
             msg: "Login first dumbass!"
         })
         // throw new Error("login first!");
@@ -34,10 +34,10 @@ export async function POST(req: NextRequest) {
                 streamId: data.streamId,
             }
         })
-        NextResponse.json(upvote)
+        return NextResponse.json(upvote)
     } catch (error) {
         console.log(error)
-        NextResponse.json(error)
+        return NextResponse.json(error)
     }
 
 

@@ -337,7 +337,8 @@ export default function MusicDemocracyDashboard() {
                           variant="outline" 
                           size="sm" 
                           className="flex-1"
-                          onClick={() => window.open(`/stream/${stream.id}`, '_blank')}
+                          // onClick={() => window.open(`/stream/${stream.id}`, '_blank')}
+                          onClick={() => window.open(`/stream?id=${stream.id}`, '_blank')}
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           View
