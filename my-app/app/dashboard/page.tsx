@@ -5,18 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { ArrowUp, Music, Share2, Play, Users, LayoutDashboard, Plus } from "lucide-react"
+import { ArrowUp, Music, Share2, Play, Users, LayoutDashboard, Plus, Eye, Vote, Crown, TrendingUp } from "lucide-react"
 import axios from "axios"
 import { useSession } from "next-auth/react"
-
-interface Video {
-  id: string
-  title: string
-  thumbnail: string
-  votes: number
-  submittedBy: string
-  url: string
-}
 
 interface Stream {
   id: string
@@ -28,62 +19,21 @@ interface Stream {
   type: string
   userId: string
   createdAt: string
+  votes?: number
+  isActive?: boolean
+  participantCount?: number
 }
 
-export default function VotePage() {
-  const [activeTab, setActiveTab] = useState<'vote' | 'dashboard'>('vote')
+export default function MusicDemocracyDashboard() {
+  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'analytics'>('create')
   const [videoUrl, setVideoUrl] = useState("")
   const [previewVideo, setPreviewVideo] = useState<any>(null)
   const [streams, setStreams] = useState<Stream[]>([])
   const [loading, setLoading] = useState(false)
-  
-  const [currentVideo] = useState<Video>({
-    id: "current",
-    title: "Blinding Lights - The Weeknd",
-    thumbnail: "/music-video-thumbnail.png",
-    votes: 247,
-    submittedBy: "musicfan123",
-    url: "https://www.youtube.com/embed/4NRXx6U8ABQ",
-  })
 
-  const [queue, setQueue] = useState<Video[]>([
-    {
-      id: "1",
-      title: "Midnight City - M83",
-      thumbnail: "/midnight-city-inspired.png",
-      votes: 189,
-      submittedBy: "synthwave_lover",
-      url: "https://www.youtube.com/embed/dX3k_QDnzHE",
-    },
-    {
-      id: "2",
-      title: "Good 4 U - Olivia Rodrigo",
-      thumbnail: "/good-4-u-inspired.png",
-      votes: 156,
-      submittedBy: "pop_princess",
-      url: "https://www.youtube.com/embed/gNi_6U5Pm_o",
-    },
-    {
-      id: "3",
-      title: "Levitating - Dua Lipa",
-      thumbnail: "/levitating-music-video.png",
-      votes: 134,
-      submittedBy: "dance_vibes",
-      url: "https://www.youtube.com/embed/TUVcZfQe-Kw",
-    },
-    {
-      id: "4",
-      title: "Heat Waves - Glass Animals",
-      thumbnail: "/heat-waves-music-video.png",
-      votes: 98,
-      submittedBy: "indie_fan",
-      url: "https://www.youtube.com/embed/mRD0-GxqHVo",
-    },
-  ])
-
-  // Fetch streams when dashboard tab is active
+  // Fetch streams when manage tab is active
   useEffect(() => {
-    if (activeTab === 'dashboard') {
+    if (activeTab === 'manage' || activeTab === 'analytics') {
       fetchStreams()
     }
   }, [activeTab])
@@ -93,7 +43,14 @@ export default function VotePage() {
       setLoading(true)
       const userRes = await axios.get("http://localhost:3000/api/my")
       const streamsRes = await axios.get(`http://localhost:3000/api/streams?creatorId=${userRes.data.id}`)
-      setStreams(streamsRes.data.streams || [])
+      // Mock some additional data for democracy features
+      const streamsWithMockData = (streamsRes.data.streams || []).map((stream: Stream) => ({
+        ...stream,
+        votes: Math.floor(Math.random() * 500) + 10,
+        isActive: Math.random() > 0.3,
+        participantCount: Math.floor(Math.random() * 100) + 5
+      }))
+      setStreams(streamsWithMockData)
     } catch (error) {
       console.error("Error fetching streams:", error)
     } finally {
@@ -122,21 +79,12 @@ export default function VotePage() {
     }
   }
 
-  const handleVote = (videoId: string) => {
-    setQueue((prev) =>
-      prev
-        .map((video) => (video.id === videoId ? { ...video, votes: video.votes + 1 } : video))
-        .sort((a, b) => b.votes - a.votes),
-    )
-  }
-
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href)
+    alert('copied');
   }
 
-  const sortedQueue = [...queue].sort((a, b) => b.votes - a.votes)
-
-  async function sendReqPost() {
+  async function createStream() {
     try {
       setLoading(true)
       const res = await axios.get("http://localhost:3000/api/my") 
@@ -147,16 +95,29 @@ export default function VotePage() {
       await axios.post("http://localhost:3000/api/streams", data)
       setVideoUrl("")
       setPreviewVideo(null)
-      // Refresh streams if we're on dashboard
-      if (activeTab === 'dashboard') {
+      // Refresh streams if we're on manage tab
+      if (activeTab === 'manage') {
         fetchStreams()
       }
     } catch (error) {
-      console.error("Error adding stream:", error)
+      console.error("Error creating stream:", error)
     } finally {
       setLoading(false)
     }
   }
+
+  const toggleStreamStatus = async (streamId: string) => {
+    // Mock toggle functionality - replace with actual API call
+    setStreams(prev => prev.map(stream => 
+      stream.id === streamId 
+        ? { ...stream, isActive: !stream.isActive }
+        : stream
+    ))
+  }
+
+  const totalVotes = streams.reduce((sum, stream) => sum + (stream.votes || 0), 0)
+  const activeStreams = streams.filter(s => s.isActive).length
+  const totalParticipants = streams.reduce((sum, stream) => sum + (stream.participantCount || 0), 0)
 
   return (
     <div className="min-h-screen bg-background">
@@ -164,17 +125,19 @@ export default function VotePage() {
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
+            {/* <Crown className="h-8 w-8 text-primary" /> */}
             <Music className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold text-foreground">Muzo</span>
+            <Badge className="bg-primary/10 text-primary border-primary/20">Creator Dashboard</Badge>
           </div>
           <div className="flex items-center space-x-4">
             <Badge className="bg-secondary/20 text-accent border-secondary/30">
-              <Users className="h-3 w-3 mr-1" />
-              24 fans voting
+              <Vote className="h-3 w-3 mr-1" />
+              {totalVotes} total votes
             </Badge>
             <Button onClick={handleShare} variant="outline" size="sm">
               <Share2 className="h-4 w-4 mr-2" />
-              Share
+              Share Dashboard
             </Button>
           </div>
         </div>
@@ -184,178 +147,123 @@ export default function VotePage() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex space-x-4 border-b border-border">
           <Button
-            variant={activeTab === 'vote' ? 'default' : 'ghost'}
-            onClick={() => setActiveTab('vote')}
+            variant={activeTab === 'create' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('create')}
             className="flex items-center space-x-2"
           >
-            <Play className="h-4 w-4" />
-            <span>Vote & Play</span>
+            <Plus className="h-4 w-4" />
+            <span>Create Stream</span>
           </Button>
           <Button
-            variant={activeTab === 'dashboard' ? 'default' : 'ghost'}
-            onClick={() => setActiveTab('dashboard')}
+            variant={activeTab === 'manage' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('manage')}
             className="flex items-center space-x-2"
           >
             <LayoutDashboard className="h-4 w-4" />
-            <span>My Streams</span>
+            <span>Manage Streams</span>
+          </Button>
+          <Button
+            variant={activeTab === 'analytics' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('analytics')}
+            className="flex items-center space-x-2"
+          >
+            <TrendingUp className="h-4 w-4" />
+            <span>Analytics</span>
           </Button>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {activeTab === 'vote' ? (
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Main Video Player */}
-            <div className="lg:col-span-2 space-y-6">
-              <Card className="border-border/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center space-x-2">
-                      <Play className="h-5 w-5 text-primary" />
-                      <span>Now Playing</span>
-                    </span>
-                    <Badge className="bg-accent/10 text-accent border-accent/20">Live</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="aspect-video bg-secondary/10 rounded-lg overflow-hidden mb-4">
-                    <iframe
-                      src={currentVideo.url}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{currentVideo.title}</h3>
-                      <p className="text-sm text-muted-foreground">Submitted by {currentVideo.submittedBy}</p>
-                    </div>
-                    <div className="flex items-center space-x-2 text-muted-foreground">
-                      <ArrowUp className="h-4 w-4" />
-                      <span className="font-medium">{currentVideo.votes}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+        {activeTab === 'create' ? (
+          /* Create Stream Tab */
+          <div className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-bold text-foreground">Create a Music Democracy Stream</h1>
+              <p className="text-muted-foreground">Let your audience vote on what plays next. Democracy in action!</p>
+            </div>
 
-              {/* Submit New Video */}
-              <Card className="border-border/50">
-                <CardHeader>
-                  <CardTitle>Submit a Song</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="Paste YouTube video URL here..."
-                      value={videoUrl}
-                      onChange={(e) => handleUrlChange(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button onClick={sendReqPost} disabled={!previewVideo || loading}>
-                      {loading ? "Adding..." : "Add to Queue"}
-                    </Button>
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Music className="h-5 w-5 text-primary" />
+                  <span>New Stream Setup</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      YouTube Video URL
+                    </label>
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="Paste YouTube video URL here... (e.g., https://youtube.com/watch?v=...)"
+                        value={videoUrl}
+                        onChange={(e) => handleUrlChange(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button onClick={createStream} disabled={!previewVideo || loading}>
+                        {loading ? "Creating..." : "Create Stream"}
+                      </Button>
+                    </div>
                   </div>
 
                   {previewVideo && (
-                    <div className="flex items-center space-x-4 p-4 bg-secondary/10 rounded-lg">
-                      <img
-                        src={previewVideo.thumbnail || "/placeholder.svg"}
-                        alt="Video thumbnail"
-                        className="w-20 h-12 object-cover rounded"
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">Ready to add to queue</p>
-                        <p className="text-xs text-muted-foreground">Preview looks good!</p>
+                    <div className="p-6 bg-secondary/10 rounded-lg border border-border/50">
+                      <h3 className="font-semibold mb-4">Stream Preview</h3>
+                      <div className="flex items-center space-x-4">
+                        <img
+                          src={previewVideo.thumbnail || "/placeholder.svg"}
+                          alt="Video thumbnail"
+                          className="w-32 h-20 object-cover rounded"
+                        />
+                        <div className="flex-1 space-y-2">
+                          <p className="font-medium">Ready to create your democracy stream!</p>
+                          <p className="text-sm text-muted-foreground">
+                            Once created, users will be able to vote on this content and suggest alternatives.
+                          </p>
+                          <div className="flex space-x-2">
+                            <Badge variant="outline">Democratic Voting</Badge>
+                            <Badge variant="outline">Real-time Results</Badge>
+                            <Badge variant="outline">Community Driven</Badge>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </div>
+                </div>
 
-            {/* Queue Sidebar */}
-            <div className="space-y-6">
-              <Card className="border-border/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Up Next</span>
-                    <Badge variant="secondary" className="bg-secondary/20 text-accent">
-                      {sortedQueue.length} songs
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {sortedQueue.map((video, index) => (
-                    <div
-                      key={video.id}
-                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-secondary/10 transition-colors"
-                    >
-                      <div className="flex-shrink-0 relative">
-                        <img
-                          src={video.thumbnail || "/placeholder.svg"}
-                          alt={video.title}
-                          className="w-16 h-10 object-cover rounded"
-                        />
-                        <div className="absolute -top-1 -left-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-bold">
-                          {index + 1}
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm text-foreground truncate">{video.title}</h4>
-                        <p className="text-xs text-muted-foreground">by {video.submittedBy}</p>
-                      </div>
-                      <div className="flex flex-col items-center space-y-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleVote(video.id)}
-                          className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
-                        >
-                          <ArrowUp className="h-3 w-3" />
-                        </Button>
-                        <span className="text-xs font-medium text-muted-foreground">{video.votes}</span>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Stats Card */}
-              <Card className="border-border/50">
-                <CardHeader>
-                  <CardTitle className="text-base">Session Stats</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Votes</span>
-                    <span className="font-medium">
-                      {sortedQueue.reduce((sum, video) => sum + video.votes, 0) + currentVideo.votes}
-                    </span>
+                <div className="grid md:grid-cols-3 gap-6 pt-6 border-t border-border/50">
+                  <div className="text-center space-y-2">
+                    <Vote className="h-8 w-8 text-primary mx-auto" />
+                    <h3 className="font-semibold">Democratic Voting</h3>
+                    <p className="text-sm text-muted-foreground">Your audience votes on what they want to hear</p>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Songs in Queue</span>
-                    <span className="font-medium">{sortedQueue.length}</span>
+                  <div className="text-center space-y-2">
+                    <Users className="h-8 w-8 text-primary mx-auto" />
+                    <h3 className="font-semibold">Community Engagement</h3>
+                    <p className="text-sm text-muted-foreground">Build an active community around your music</p>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Active Fans</span>
-                    <span className="font-medium">24</span>
+                  <div className="text-center space-y-2">
+                    <TrendingUp className="h-8 w-8 text-primary mx-auto" />
+                    <h3 className="font-semibold">Real-time Analytics</h3>
+                    <p className="text-sm text-muted-foreground">Track votes, engagement, and trends</p>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        ) : (
-          /* Dashboard View */
+        ) : activeTab === 'manage' ? (
+          /* Manage Streams Tab */
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">My Streams Dashboard</h2>
-                <p className="text-muted-foreground">Manage and view all your created streams</p>
+                <h2 className="text-2xl font-bold text-foreground">Manage Your Democracy Streams</h2>
+                <p className="text-muted-foreground">Control your active streams and monitor voting activity</p>
               </div>
-              <Button onClick={() => setActiveTab('vote')} className="flex items-center space-x-2">
+              <Button onClick={() => setActiveTab('create')} className="flex items-center space-x-2">
                 <Plus className="h-4 w-4" />
-                <span>Add New Stream</span>
+                <span>Create New Stream</span>
               </Button>
             </div>
 
@@ -371,392 +279,248 @@ export default function VotePage() {
             ) : streams.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Music className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No streams yet</h3>
-                  <p className="text-muted-foreground mb-4">Create your first stream to get started!</p>
-                  <Button onClick={() => setActiveTab('vote')}>
+                  <Crown className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No democracy streams yet</h3>
+                  <p className="text-muted-foreground mb-4">Create your first stream to start building your music democracy!</p>
+                  <Button onClick={() => setActiveTab('create')}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Stream
+                    Create First Stream
                   </Button>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid lg:grid-cols-2 gap-6">
                 {streams.map((stream) => (
                   <Card key={stream.id} className="border-border/50 hover:border-primary/20 transition-colors">
-                    <CardHeader className="pb-2">
-                      <div className="aspect-video bg-secondary/10 rounded-lg overflow-hidden mb-2">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-base line-clamp-2 mb-2">{stream.title}</CardTitle>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant={stream.isActive ? "default" : "secondary"}>
+                              {stream.isActive ? "Live" : "Inactive"}
+                            </Badge>
+                            <Badge variant="outline" className="bg-secondary/10">
+                              {stream.type}
+                            </Badge>
+                          </div>
+                        </div>
                         <img
-                          src={stream.bigImg || "/placeholder.svg"}
+                          src={stream.smallImg || "/placeholder.svg"}
                           alt={stream.title}
-                          className="w-full h-full object-cover"
+                          className="w-16 h-10 object-cover rounded flex-shrink-0 ml-4"
                         />
                       </div>
-                      <CardTitle className="text-base line-clamp-2">{stream.title}</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="bg-secondary/10">
-                          {stream.type}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(stream.createdAt).toLocaleDateString()}
-                        </span>
+                    <CardContent className="space-y-4">
+                      {/* Voting Stats */}
+                      <div className="grid grid-cols-3 gap-4 py-3 bg-secondary/10 rounded-lg px-3">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-primary">{stream.votes}</div>
+                          <div className="text-xs text-muted-foreground">Votes</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-primary">{stream.participantCount}</div>
+                          <div className="text-xs text-muted-foreground">Participants</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-primary">
+                            {Math.round((stream.votes || 0) / (stream.participantCount || 1) * 100)}%
+                          </div>
+                          <div className="text-xs text-muted-foreground">Engagement</div>
+                        </div>
                       </div>
+
+                      {/* Action Buttons */}
                       <div className="flex space-x-2">
                         <Button 
                           variant="outline" 
                           size="sm" 
                           className="flex-1"
-                          onClick={() => window.open(stream.url, '_blank')}
+                          onClick={() => window.open(`/stream/${stream.id}`, '_blank')}
                         >
-                          <Play className="h-3 w-3 mr-1" />
-                          Watch
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
                           className="flex-1"
-                          onClick={() => {
-                            navigator.clipboard.writeText(stream.url)
-                          }}
+                          onClick={() => toggleStreamStatus(stream.id)}
+                        >
+                          {stream.isActive ? "Pause" : "Activate"}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => navigator.clipboard.writeText(`${window.location.origin}/stream/${stream.id}`)}
                         >
                           <Share2 className="h-3 w-3 mr-1" />
                           Share
                         </Button>
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        Created: {new Date(stream.createdAt).toLocaleDateString()}
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
+          </div>
+        ) : (
+          /* Analytics Tab */
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">Democracy Analytics</h2>
+              <p className="text-muted-foreground">Track the performance of your music democracy streams</p>
+            </div>
 
-            {/* Dashboard Stats */}
-            {streams.length > 0 && (
+            {/* Overview Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card className="border-border/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total Streams</p>
+                      <p className="text-3xl font-bold text-primary">{streams.length}</p>
+                    </div>
+                    <LayoutDashboard className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Active Streams</p>
+                      <p className="text-3xl font-bold text-primary">{activeStreams}</p>
+                    </div>
+                    <Play className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total Votes</p>
+                      <p className="text-3xl font-bold text-primary">{totalVotes}</p>
+                    </div>
+                    <ArrowUp className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total Participants</p>
+                      <p className="text-3xl font-bold text-primary">{totalParticipants}</p>
+                    </div>
+                    <Users className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Top Performing Streams */}
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle>Top Performing Democracy Streams</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {streams
+                    .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+                    .slice(0, 5)
+                    .map((stream, index) => (
+                      <div key={stream.id} className="flex items-center space-x-4 p-3 rounded-lg hover:bg-secondary/10">
+                        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                          {index + 1}
+                        </div>
+                        <img
+                          src={stream.smallImg || "/placeholder.svg"}
+                          alt={stream.title}
+                          className="w-12 h-8 object-cover rounded"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm line-clamp-1">{stream.title}</h4>
+                          <p className="text-xs text-muted-foreground">{stream.participantCount} participants</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-primary">{stream.votes}</div>
+                          <div className="text-xs text-muted-foreground">votes</div>
+                        </div>
+                        <Badge variant={stream.isActive ? "default" : "secondary"}>
+                          {stream.isActive ? "Live" : "Inactive"}
+                        </Badge>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Engagement Metrics */}
+            <div className="grid md:grid-cols-2 gap-6">
               <Card className="border-border/50">
                 <CardHeader>
-                  <CardTitle className="text-base">Dashboard Stats</CardTitle>
+                  <CardTitle className="text-base">Engagement Overview</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">{streams.length}</div>
-                      <div className="text-sm text-muted-foreground">Total Streams</div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Average Votes per Stream</span>
+                      <span className="font-medium">
+                        {streams.length ? Math.round(totalVotes / streams.length) : 0}
+                      </span>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">
-                        {streams.filter(s => s.type === 'Youtube').length}
-                      </div>
-                      <div className="text-sm text-muted-foreground">YouTube Videos</div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Average Participants per Stream</span>
+                      <span className="font-medium">
+                        {streams.length ? Math.round(totalParticipants / streams.length) : 0}
+                      </span>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">
-                        {streams.filter(s => 
-                          new Date(s.createdAt).toDateString() === new Date().toDateString()
-                        ).length}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Added Today</div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Active Stream Rate</span>
+                      <span className="font-medium">
+                        {streams.length ? Math.round((activeStreams / streams.length) * 100) : 0}%
+                      </span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
+
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-base">Democracy Health</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Community Engagement</span>
+                      <Badge variant="default">High</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Voting Activity</span>
+                      <Badge variant="default">Active</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Stream Quality</span>
+                      <Badge variant="default">Excellent</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
       </div>
     </div>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-// "use client"
-
-// import { useState } from "react"
-// import { Button } from "@/components/ui/button"
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-// import { Input } from "@/components/ui/input"
-// import { Badge } from "@/components/ui/badge"
-// import { ArrowUp, Music, Share2, Play, Users } from "lucide-react"
-// import axios from "axios"
-// import { useSession } from "next-auth/react"
-
-// interface Video {
-//   id: string
-//   title: string
-//   thumbnail: string
-//   votes: number
-//   submittedBy: string
-//   url: string
-// }
-
-// export default function VotePage() {
-//   const [videoUrl, setVideoUrl] = useState("")
-//   const [previewVideo, setPreviewVideo] = useState<any>(null)
-//   const [currentVideo] = useState<Video>({
-//     id: "current",
-//     title: "Blinding Lights - The Weeknd",
-//     thumbnail: "/music-video-thumbnail.png",
-//     votes: 247,
-//     submittedBy: "musicfan123",
-//     url: "https://www.youtube.com/embed/4NRXx6U8ABQ",
-//   })
-
-//   const [queue, setQueue] = useState<Video[]>([
-//     {
-//       id: "1",
-//       title: "Midnight City - M83",
-//       thumbnail: "/midnight-city-inspired.png",
-//       votes: 189,
-//       submittedBy: "synthwave_lover",
-//       url: "https://www.youtube.com/embed/dX3k_QDnzHE",
-//     },
-//     {
-//       id: "2",
-//       title: "Good 4 U - Olivia Rodrigo",
-//       thumbnail: "/good-4-u-inspired.png",
-//       votes: 156,
-//       submittedBy: "pop_princess",
-//       url: "https://www.youtube.com/embed/gNi_6U5Pm_o",
-//     },
-//     {
-//       id: "3",
-//       title: "Levitating - Dua Lipa",
-//       thumbnail: "/levitating-music-video.png",
-//       votes: 134,
-//       submittedBy: "dance_vibes",
-//       url: "https://www.youtube.com/embed/TUVcZfQe-Kw",
-//     },
-//     {
-//       id: "4",
-//       title: "Heat Waves - Glass Animals",
-//       thumbnail: "/heat-waves-music-video.png",
-//       votes: 98,
-//       submittedBy: "indie_fan",
-//       url: "https://www.youtube.com/embed/mRD0-GxqHVo",
-//     },
-//   ])
-
-//   const extractVideoId = (url: string) => {
-//     const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/
-//     const match = url.match(regex)
-//     return match ? match[1] : null
-//   }
-
-//   const handleUrlChange = (url: string) => {
-//     setVideoUrl(url)
-//     const videoId = extractVideoId(url)
-//     if (videoId) {
-//       setPreviewVideo({
-//         id: videoId,
-//         title: "Preview Video",
-//         thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
-//         url: `https://www.youtube.com/embed/${videoId}`,
-//       })
-//     } else {
-//       setPreviewVideo(null)
-//     }
-//   }
-
-//   const handleVote = (videoId: string) => {
-//     setQueue((prev) =>
-//       prev
-//         .map((video) => (video.id === videoId ? { ...video, votes: video.votes + 1 } : video))
-//         .sort((a, b) => b.votes - a.votes),
-//     )
-//   }
-
-//   const handleShare = () => {
-//     navigator.clipboard.writeText(window.location.href)
-//     // You could add a toast notification here
-//   }
-
-//   const sortedQueue = [...queue].sort((a, b) => b.votes - a.votes)
-
-//   async function sendReqPost() {
-//     const res = await axios.get("http://localhost:3000/api/my") 
-//     // console.log(res.data)
-//     const data = {
-//       creatorId: res.data.id,
-//       url: videoUrl
-//     }
-//     axios.post("http://localhost:3000/api/streams", data)
-//   }
-
-
-//   return (
-//     <div className="min-h-screen bg-background">
-//       {/* Header */}
-//       <header className="border-b border-border">
-//         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-//           <div className="flex items-center space-x-2">
-//             <Music className="h-8 w-8 text-primary" />
-//             <span className="text-2xl font-bold text-foreground">Muzo</span>
-//           </div>
-//           <div className="flex items-center space-x-4">
-//             <Badge className="bg-secondary/20 text-accent border-secondary/30">
-//               <Users className="h-3 w-3 mr-1" />
-//               24 fans voting
-//             </Badge>
-//             <Button onClick={handleShare} variant="outline" size="sm">
-//               <Share2 className="h-4 w-4 mr-2" />
-//               Share
-//             </Button>
-//           </div>
-//         </div>
-//       </header>
-
-//       <div className="container mx-auto px-4 py-8 max-w-7xl">
-//         <div className="grid lg:grid-cols-3 gap-8">
-//           {/* Main Video Player */}
-//           <div className="lg:col-span-2 space-y-6">
-//             <Card className="border-border/50">
-//               <CardHeader>
-//                 <CardTitle className="flex items-center justify-between">
-//                   <span className="flex items-center space-x-2">
-//                     <Play className="h-5 w-5 text-primary" />
-//                     <span>Now Playing</span>
-//                   </span>
-//                   <Badge className="bg-accent/10 text-accent border-accent/20">Live</Badge>
-//                 </CardTitle>
-//               </CardHeader>
-//               <CardContent>
-//                 <div className="aspect-video bg-secondary/10 rounded-lg overflow-hidden mb-4">
-//                   <iframe
-//                     src={currentVideo.url}
-//                     className="w-full h-full"
-//                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-//                     allowFullScreen
-//                   />
-//                 </div>
-//                 <div className="flex items-center justify-between">
-//                   <div>
-//                     <h3 className="font-semibold text-foreground">{currentVideo.title}</h3>
-//                     <p className="text-sm text-muted-foreground">Submitted by {currentVideo.submittedBy}</p>
-//                   </div>
-//                   <div className="flex items-center space-x-2 text-muted-foreground">
-//                     <ArrowUp className="h-4 w-4" />
-//                     <span className="font-medium">{currentVideo.votes}</span>
-//                   </div>
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* Submit New Video */}
-//             <Card className="border-border/50">
-//               <CardHeader>
-//                 <CardTitle>Submit a Song</CardTitle>
-//               </CardHeader>
-//               <CardContent className="space-y-4">
-//                 <div className="flex space-x-2">
-//                   <Input
-//                     placeholder="Paste YouTube video URL here..."
-//                     value={videoUrl}
-//                     onChange={(e) => handleUrlChange(e.target.value)}
-//                     className="flex-1"
-//                   />
-//                   <Button onClick={sendReqPost} disabled={!previewVideo}>Add to Queue</Button>
-//                 </div>
-
-//                 {previewVideo && (
-//                   <div className="flex items-center space-x-4 p-4 bg-secondary/10 rounded-lg">
-//                     <img
-//                       src={previewVideo.thumbnail || "/placeholder.svg"}
-//                       alt="Video thumbnail"
-//                       className="w-20 h-12 object-cover rounded"
-//                     />
-//                     <div className="flex-1">
-//                       <p className="font-medium text-sm">Ready to add to queue</p>
-//                       <p className="text-xs text-muted-foreground">Preview looks good!</p>
-//                     </div>
-//                   </div>
-//                 )}
-//               </CardContent>
-//             </Card>
-//           </div>
-
-//           {/* Queue Sidebar */}
-//           <div className="space-y-6">
-//             <Card className="border-border/50">
-//               <CardHeader>
-//                 <CardTitle className="flex items-center justify-between">
-//                   <span>Up Next</span>
-//                   <Badge variant="secondary" className="bg-secondary/20 text-accent">
-//                     {sortedQueue.length} songs
-//                   </Badge>
-//                 </CardTitle>
-//               </CardHeader>
-//               <CardContent className="space-y-4">
-//                 {sortedQueue.map((video, index) => (
-//                   <div
-//                     key={video.id}
-//                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-secondary/10 transition-colors"
-//                   >
-//                     <div className="flex-shrink-0 relative">
-//                       <img
-//                         src={video.thumbnail || "/placeholder.svg"}
-//                         alt={video.title}
-//                         className="w-16 h-10 object-cover rounded"
-//                       />
-//                       <div className="absolute -top-1 -left-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-bold">
-//                         {index + 1}
-//                       </div>
-//                     </div>
-//                     <div className="flex-1 min-w-0">
-//                       <h4 className="font-medium text-sm text-foreground truncate">{video.title}</h4>
-//                       <p className="text-xs text-muted-foreground">by {video.submittedBy}</p>
-//                     </div>
-//                     <div className="flex flex-col items-center space-y-1">
-//                       <Button
-//                         variant="outline"
-//                         size="sm"
-//                         onClick={() => handleVote(video.id)}
-//                         className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
-//                       >
-//                         <ArrowUp className="h-3 w-3" />
-//                       </Button>
-//                       <span className="text-xs font-medium text-muted-foreground">{video.votes}</span>
-//                     </div>
-//                   </div>
-//                 ))}
-//               </CardContent>
-//             </Card>
-
-//             {/* Stats Card */}
-//             <Card className="border-border/50">
-//               <CardHeader>
-//                 <CardTitle className="text-base">Session Stats</CardTitle>
-//               </CardHeader>
-//               <CardContent className="space-y-3">
-//                 <div className="flex justify-between text-sm">
-//                   <span className="text-muted-foreground">Total Votes</span>
-//                   <span className="font-medium">
-//                     {sortedQueue.reduce((sum, video) => sum + video.votes, 0) + currentVideo.votes}
-//                   </span>
-//                 </div>
-//                 <div className="flex justify-between text-sm">
-//                   <span className="text-muted-foreground">Songs in Queue</span>
-//                   <span className="font-medium">{sortedQueue.length}</span>
-//                 </div>
-//                 <div className="flex justify-between text-sm">
-//                   <span className="text-muted-foreground">Active Fans</span>
-//                   <span className="font-medium">24</span>
-//                 </div>
-//               </CardContent>
-//             </Card>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   )
-// }
