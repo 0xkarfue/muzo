@@ -35,6 +35,12 @@ export async function POST(req: NextRequest) {
                 }
             }
         });
+
+
+
+        return NextResponse.json({
+            msg: "Done"
+        })
     } catch (error) {
         console.log(error)
         return NextResponse.json(error)

@@ -84,7 +84,12 @@ export default function StreamViewerPage() {
             userId,
             streamId
         }
-        axios.post("http://localhost:3000/api/streams/upvote", data);
+        const postData = axios.post("http://localhost:3000/api/streams/upvote", data);
+        const parsed = (await postData).data
+        setVotingStats(prev => ({
+            ...prev,
+            upvotes: parsed.upvoteCount
+        }))
     }
 
     async function downvote() {
@@ -98,89 +103,17 @@ export default function StreamViewerPage() {
         axios.post("http://localhost:3000/api/streams/downvote", data);
     }
 
-
     const [votingStats, setVotingStats] = useState<VotingStats>({
-        upvotes: 342,
-        downvotes: 28,
-        totalVotes: 370,
+        upvotes: 0,
+        downvotes: 0,
+        totalVotes: 0,
         userVote: null,
-        engagement: 92
+        engagement: 0
     })
 
     const [isLoading, setIsLoading] = useState(false)
     const [viewCount, setViewCount] = useState(1247)
 
-    // Mock related streams
-    const [relatedStreams] = useState([
-        {
-            id: "stream-456",
-            title: "Chill Lo-Fi Hip Hop Radio",
-            smallImg: "https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg",
-            votes: 198,
-            participantCount: 89,
-            isActive: true
-        },
-        {
-            id: "stream-789",
-            title: "Synthwave Retrowave Mix",
-            smallImg: "https://img.youtube.com/vi/4xDzrJKXOOY/mqdefault.jpg",
-            votes: 156,
-            participantCount: 67,
-            isActive: true
-        },
-        {
-            id: "stream-101",
-            title: "Classical Music for Study",
-            smallImg: "https://img.youtube.com/vi/EhO_MrRfftU/mqdefault.jpg",
-            votes: 234,
-            participantCount: 45,
-            isActive: false
-        }
-    ])
-
-    useEffect(() => {
-        // Simulate view count increment
-        const timer = setTimeout(() => {
-            setViewCount(prev => prev + 1)
-        }, 2000)
-        return () => clearTimeout(timer)
-    }, [])
-
-    const handleVote = async (type: 'up' | 'down') => {
-        setIsLoading(true)
-
-        // Simulate API call
-        setTimeout(() => {
-            setVotingStats(prev => {
-                const newStats = { ...prev }
-
-                // Remove previous vote if exists
-                if (prev.userVote === 'up') {
-                    newStats.upvotes -= 1
-                } else if (prev.userVote === 'down') {
-                    newStats.downvotes -= 1
-                }
-
-                // Add new vote or toggle off
-                if (prev.userVote === type) {
-                    newStats.userVote = null
-                } else {
-                    newStats.userVote = type
-                    if (type === 'up') {
-                        newStats.upvotes += 1
-                    } else {
-                        newStats.downvotes += 1
-                    }
-                }
-
-                newStats.totalVotes = newStats.upvotes + newStats.downvotes
-                newStats.engagement = Math.round((newStats.upvotes / newStats.totalVotes) * 100)
-
-                return newStats
-            })
-            setIsLoading(false)
-        }, 500)
-    }
 
     const handleShare = () => {
         navigator.clipboard.writeText(window.location.href)
@@ -382,37 +315,6 @@ export default function StreamViewerPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Related Streams */}
-                        <Card className="border-border/50">
-                            <CardHeader>
-                                <CardTitle className="text-base">Other Democracy Streams</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                {relatedStreams.map((relatedStream) => (
-                                    <div key={relatedStream.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-secondary/10 cursor-pointer transition-colors">
-                                        <img
-                                            src={relatedStream.smallImg}
-                                            alt={relatedStream.title}
-                                            className="w-16 h-10 object-cover rounded flex-shrink-0"
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="text-sm font-medium text-foreground line-clamp-2">{relatedStream.title}</h4>
-                                            <div className="flex items-center space-x-2 mt-1">
-                                                <Badge
-                                                    variant={relatedStream.isActive ? "default" : "secondary"}
-                                                    className="text-xs"
-                                                >
-                                                    {relatedStream.isActive ? "Live" : "Inactive"}
-                                                </Badge>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {relatedStream.votes} votes
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
                     </div>
                 </div>
             </div>

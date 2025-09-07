@@ -28,13 +28,23 @@ export async function POST(req: NextRequest) {
 
     try {
         const data = UpvoteSchema.parse(await req.json());
+
         const upvote = await prisma.upvote.create({
             data: {
                 userId: user?.id ?? "",
                 streamId: data.streamId,
             }
         })
-        return NextResponse.json(upvote)
+
+        const upvoteCount = await prisma.upvote.count({
+            where: {
+                streamId: data.streamId
+            }
+        })
+
+        return NextResponse.json({
+            upvoteCount
+        })
     } catch (error) {
         console.log(error)
         return NextResponse.json(error)
